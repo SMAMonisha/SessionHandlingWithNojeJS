@@ -13,12 +13,15 @@ CREATE TRIGGER before_insert_cart
 BEFORE INSERT ON CART
 FOR EACH ROW
 BEGIN
-    IF new.session_id IS NULL && new.NumberOFItem = 0 THEN
-    SET new.session_id = RAND(6);
+    DECLARE ISession INT DEFAULT 0;
+    SELECT COUNT(ItemName) into ISession
+		FROM CART
+		WHERE 1=1;
+      IF new.session_id IS NULL && ISession = 0 THEN
+        SET new.session_id = UUID();
+
   END IF;
-#   IF new.session_id IS NULL THEN
-#     SET new.session_id = uuid();
-#   END IF;
+
 END
 ;
 
@@ -28,6 +31,7 @@ CREATE PROCEDURE store_in_cart(IN _ItemName varchar(36),IN _NumberOfItem INT)
 	BEGIN
 	    DECLARE Itemscount INT DEFAULT 0;
 	    DECLARE OldItem INT DEFAULT 0;
+	    DECLARE Session CHAR(36) DEFAULT 0;
 	    SELECT COUNT(ItemName) into Itemscount
 		FROM CART
 		WHERE 1=1;
@@ -42,16 +46,20 @@ CREATE PROCEDURE store_in_cart(IN _ItemName varchar(36),IN _NumberOfItem INT)
             IF OldItem = 0 THEN
                  INSERT INTO CART(ItemName,NumberOFItem)
 		         VALUES (_ItemName,_NumberOfItem);
-            end if;
+                 SELECT distinct session_id  into Session  FROM CART WHERE NumberOFItem  IS NOT NULL limit 1;
+                UPDATE CART SET session_id = Session WHERE ItemName=_ItemName;
+                end if;
 	        UPDATE  CART
 	            SET NumberOFItem=NumberOFItem+_NumberOfItem
                 WHERE ItemName=_ItemName;
         end if;
 
 
--- 		 # SET _ratingID=LAST_INSERT_ID();
- 	SELECT _ItemName AS 'ITEMNAME';
+
+		  SET Session=LAST_INSERT_ID();
+	       	SELECT session_id  FROM CART WHERE session_id=LAST_INSERT_ID() ;
 	END;
-  CALL store_in_cart('coffee',2);
+
+--   CALL store_in_cart('book',2);
 
 

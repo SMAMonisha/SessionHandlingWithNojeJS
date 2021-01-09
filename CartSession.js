@@ -19,13 +19,14 @@ var mysqlConnection =mysql.createConnection({
 mysqlConnection.connect((err) => {
     if(!err)
         console.log('DB connected');
+
     else
         console.log('DB connection failed');    
 });
 
 app.listen(3000, () => console.log('Express server is runnig at port no : 3000'));
 
-//Get all ratings
+//Get all in cart
 app.get('/cart', (req, res) => {
     //console.log(exeCount);
 
@@ -39,24 +40,34 @@ app.get('/cart', (req, res) => {
     })
 });
 
-//Insert an employees
+//Insert an item
 app.post('/cart', (req, res) => {
     let emp = req.body;
     var sql1 = "SELECT COUNT(ItemName) into Itemscount FROM CART WHERE 1=1;";
     mysqlConnection.query(sql1, (err, rows) => {
-     console.log(rows)
+     //console.log(rows)
     });
     var sql = "SET @ItemName = ?;SET @NumberOFItem = ?; \
     CALL store_in_cart(@ItemName,@NumberOFItem);";
     mysqlConnection.query(sql, [ emp.ItemName, emp.NumberOFItem], (err, rows, fields) => {
-        //console.log("rows"+rows);
+        console.log("rows"+rows);
+        // var Arr=rows[0]
+        // console.log("rows"+Arr.ItemName);
+
         if (!err){
-            // rows.forEach(element => {
+            mysqlConnection.query('SELECT session_id  FROM CART WHERE session_id=LAST_INSERT_ID() ; ', (err, rows, fields) => {
+                if (!err)
+                {
+                    res.send('Inserted cart session_id '+rows[1].session_id);
+                }
+                else
+                    console.log(err);
+            })            // rows.forEach(element => {
             // //    if(element.constructor == Array)
             // //    res.send('Inserted rating product id : '+element[0].productId);
             // });
             //console.log("y");
-            res.send('Inserted cart product id : ');
+            //res.send('Inserted cart product id : ');
 
             
         }
@@ -94,7 +105,7 @@ app.post('/cart', (req, res) => {
     
 // });
 
-//Delete an employees
+//Delete an item
 app.delete('/cart/remove/:name', (req, res) => {
 
     mysqlConnection.query('DELETE FROM cart WHERE ItemName = ?', [req.params.name], (err, rows, fields) => {
@@ -105,13 +116,13 @@ app.delete('/cart/remove/:name', (req, res) => {
     })
 });
 
-//Delete an employees
+//decrease an item
 app.delete('/cart/decrease/:name', (req, res) => {
 
     mysqlConnection.query('Update CART  Set NumberOFItem = NumberOFItem-1\
     WHERE ItemName = ?', [req.params.name], (err, rows, fields) => {
         if (!err)
-            res.send('Deleted successfully.');
+            res.send('Decreased successfully.');
         else
             console.log(err);
     })
